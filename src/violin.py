@@ -6,6 +6,8 @@ from svg import Svg
 from arching import *
 
 class Violin:
+    _closs = {"violin":((40,15),(24,6)), "cello":((100,30),(50,10))}
+
     body_calculated = False
     corner_calculated = False
 
@@ -341,12 +343,17 @@ class Violin:
         return path_str       
 
 
-    def get_template(self, color="black", move=[0,0]):
+    def get_template(self, color="black", move=[0,0], type="violin"):
         
         path = []
         svg = Svg(self.h, 2*self.rl, transpose=move)
         svg.color = color
-        svg.stroke_width = 0.25
+        svg.stroke_width = .25*Svg._px2mm
+        
+        # Template holes
+        closs_size = self._closs[type][0]
+        corner_closs_size = self._closs[type][1]
+        hole_dia = 1 # mm
 
         path.append(svg.move_to((self.rl, 0)))
         path.append(svg.arc(self.r1, (
@@ -399,11 +406,6 @@ class Violin:
             as_str += p
         as_str += f"\" style=\"fill:none;stroke:{svg.color};stroke-width:{svg._px2mm * svg.stroke_width}\" />\n"
 
-        # Template holes
-        closs_size = (100,30)#(40,15)
-        corner_closs_size = (50,10)#(24,6)
-
-        hole_dia = 1
         svg.fill=color
         svg.stroke_width=0
 
@@ -495,18 +497,19 @@ class Violin:
         
         return arches_width, arches_pos, arches, long
 
-    def get_arches_path_on_outline(self, h, afc=None, afd=None, color="red", long_color="green", refline_color="grey"):
+    def get_arches_path_on_outline(self, h, afc=None, afd=None, color="red", long_color="green", refline_color="grey", move=[0,0]):
         arches_width, arches_pos, arches, long = self.get_arching(h,afc,afd)
 
         combine = lambda a,b,c : (a,b,c)
         paths = ""
         for a,p,w in map(combine, arches, arches_pos, arches_width):
-            paths += self.get_arch_path([[0,w],[0,0]], start=((2*self.rl-w)/2, -p), color=refline_color)
+            start = (move[0]+(2*self.rl-w)/2, move[1]-p)
+            paths += self.get_arch_path([[0,w],[0,0]], start=start, color=refline_color)
             paths += "\n"
-            paths += self.get_arch_path(a,start=((2*self.rl-w)/2, -p), color=color)
+            paths += self.get_arch_path(a,start=start, color=color)
             paths += "\n"
-        paths += self.get_arch_path([[0,self.h],[0,0]], dir=1, start=(self.rl, 0), color=refline_color)
-        paths += self.get_arch_path(long, dir=1, start=(self.rl, 0), color=long_color)
+        paths += self.get_arch_path([[0,self.h],[0,0]], dir=1, start=(move[0]+self.rl, move[1]), color=refline_color)
+        paths += self.get_arch_path(long, dir=1, start=(move[0]+self.rl, move[1]), color=long_color)
 
         return paths
 

@@ -1,6 +1,7 @@
 import json
 import argparse
 import violin
+from svg import Svg
 
 def load_instruments(file="data/instruments.json"):
     instruments = None
@@ -19,11 +20,12 @@ def save_instruments(instruments, file="data/instruments.json", indent=None):
 
 
 def main(args):
+    # json cleanup each time :)
     data = load_instruments()
     save_instruments(data, indent=4)
 
-
-    selection = data[args.instrument] if args.instrument and args.instrument.casefold() in [x.casefold() for x in data.keys()] else data
+    #TODO: make this case insensitive
+    selection = data[args.instrument] if args.instrument and args.instrument.casefold() in [x.casefold() for x in data.keys()] else data   
     selection = selection[args.maker] if selection and args.maker and args.maker.casefold() in [x.casefold() for x in selection.keys()] else selection
     
     if args.model:
@@ -59,20 +61,45 @@ def main(args):
         instrument.calculate_corner_params()
         
         height, width = instrument.get_dimensions()
+
+        transpose = [0,0]
+        image = ""
+        if args.image:
+            transpose = [5,5]
+            width += 2*transpose[0]*Svg._px2mm
+            height += 2*transpose[1]*Svg._px2mm
+
+            image_size = height
+            if args.image_resize:
+                image_size *= args.image_resize
+            image_dx = (width-image_size)/2
+            if args.image_dx:
+                image_dx += Svg._px2mm*args.image_dx
+            image_dy = -args.image_dy if args.image_dy else 0
+
+            image = f"<image href=\"{args.image}\" width=\"{image_size}\" height=\"{image_size}\" x=\"{image_dx}\" y=\"{image_dy}\"/> \n" 
+
         svgstr = f"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\">\n"
+        svgstr += image
+
+        color = args.color if args.color else "black"
+
         if args.template:
-            svgstr += instrument.get_template(color="white") + "\n"
+            svgstr += instrument.get_template(color=color, move=transpose, type=args.instrument) + "\n"
         else:
-            svgstr += instrument.get_outline_path(color="white") + "\n"
-            svgstr += instrument.get_circles_svg()
+            svgstr += instrument.get_outline_path(color=color, move=transpose) + "\n"
             if "af" in selection[0]:
                 afc = selection[0]['afc'] if 'afc' in selection[0] else None
                 afd = selection[0]['afd'] if 'afd' in selection[0] else None
-                svgstr += instrument.get_arches_path_on_outline(selection[0]["af"], afc=afc, afd=afd)
+                svgstr += instrument.get_arches_path_on_outline(selection[0]["af"], afc=afc, afd=afd, move=transpose)
                 svgstr += "\n"
             if "ab" in selection[0]:
-                svgstr += instrument.get_arches_path_on_outline(-selection[0]["ab"], color="yellow", long_color="cyan")
+                svgstr += instrument.get_arches_path_on_outline(-selection[0]["ab"], color="yellow", long_color="cyan", move=transpose)
                 svgstr += "\n"
+
+        if args.circles:
+            svgstr += instrument.get_circles_svg(move=transpose)
+        
         svgstr += "</svg>\n"
         with open("out.svg", "w") as fout:
             fout.write(svgstr)
@@ -98,6 +125,10 @@ if __name__ == '__main__':
     parser.add_argument('maker', nargs='?')
     parser.add_argument('model', nargs='?')
     parser.add_argument('-t', '--template', action='store_true')
-    parser.add_argument('-a', '--all', action='store_true')  # on/off flag
-    parser.add_argument('-v', '--dbg', action='store_true')  # on/off flag
+    parser.add_argument('-c','--circles', action='store_true')
+    parser.add_argument('-i', '--image', type=str)
+    parser.add_argument('--color', type=str)
+    parser.add_argument('--image_dx', type=float)
+    parser.add_argument('--image_dy', type=float)
+    parser.add_argument('--image_resize', type=float)
     main(parser.parse_args())
