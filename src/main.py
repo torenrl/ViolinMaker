@@ -60,16 +60,19 @@ def main(args):
         
         height, width = instrument.get_dimensions()
         svgstr = f"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\">\n"
-        svgstr += instrument.get_outline_path(color="white") + "\n"
-        svgstr += instrument.get_circles_svg()
-        if "af" in selection[0]:
-            afc = selection[0]['afc'] if 'afc' in selection[0] else None
-            afd = selection[0]['afd'] if 'afd' in selection[0] else None
-            svgstr += instrument.get_arches_path_on_outline(selection[0]["af"], afc=afc, afd=afd)
-            svgstr += "\n"
-        if "ab" in selection[0]:
-            svgstr += instrument.get_arches_path_on_outline(-selection[0]["ab"], color="yellow", long_color="cyan")
-            svgstr += "\n"
+        if args.template:
+            svgstr += instrument.get_template(color="white") + "\n"
+        else:
+            svgstr += instrument.get_outline_path(color="white") + "\n"
+            svgstr += instrument.get_circles_svg()
+            if "af" in selection[0]:
+                afc = selection[0]['afc'] if 'afc' in selection[0] else None
+                afd = selection[0]['afd'] if 'afd' in selection[0] else None
+                svgstr += instrument.get_arches_path_on_outline(selection[0]["af"], afc=afc, afd=afd)
+                svgstr += "\n"
+            if "ab" in selection[0]:
+                svgstr += instrument.get_arches_path_on_outline(-selection[0]["ab"], color="yellow", long_color="cyan")
+                svgstr += "\n"
         svgstr += "</svg>\n"
         with open("out.svg", "w") as fout:
             fout.write(svgstr)
@@ -94,6 +97,7 @@ if __name__ == '__main__':
     parser.add_argument('instrument', nargs='?')
     parser.add_argument('maker', nargs='?')
     parser.add_argument('model', nargs='?')
+    parser.add_argument('-t', '--template', action='store_true')
     parser.add_argument('-a', '--all', action='store_true')  # on/off flag
     parser.add_argument('-v', '--dbg', action='store_true')  # on/off flag
     main(parser.parse_args())
